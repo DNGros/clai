@@ -19,18 +19,34 @@ def predict(invocations, result_cnt=5):
     n_batch = len(invocations)
     
     # `commands` and `confidences` have shape (n_batch, result_cnt)
-    commands = [ 
-        [''] * result_cnt
-        for _ in range(n_batch)
-    ]
-    confidences = [ 
-        [1.0] * result_cnt
-        for _ in range(n_batch)
-    ]
+    #commands = [
+    #    [''] * result_cnt
+    #    for _ in range(n_batch)
+    #]
+    #confidences = [
+    #    [1.0] * result_cnt
+    #    for _ in range(n_batch)
+    #]
 
     ################################################################################################
     #     Participants should add their codes to fill predict `commands` and `confidences` here    #
     ################################################################################################
+
+    print("LEN", len(invocations))
+    print(invocations)
+    commands = []
+    confidences = []
+    for nl in invocations:
+        commands.append([
+            "find",
+            "ls",
+            "rm",
+            "find | xargs",
+            "grep"
+        ])
+        confidences.append([1.0] * 5)
+    print("LEN c", len(commands))
+    print("LEN con", len(confidences))
 
 
 
