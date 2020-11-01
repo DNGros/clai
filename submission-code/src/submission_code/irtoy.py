@@ -19,12 +19,17 @@ class ToyIRModel(Model):
         print(query)
         top_inds, scores = self.inner_model.query(
             query,
-            k=n, return_scores=True)
-        return [
-            Prediction(self.data.examples[ind].cmd, score, str(self.data.examples[ind]))
+            k=n*2,
+            return_scores=True
+        )
+        return sorted([
+            Prediction(
+                self.data.examples[ind].cmd,
+                score*self.data.examples[ind].pref_weight,
+                str(self.data.examples[ind])
+            )
             for ind, score in zip(top_inds, scores)
-        ]
-        pass
+        ], key=lambda pred: pred.prob, reverse=True)[:n]
 
 
 def load_model() -> Model:
@@ -45,7 +50,11 @@ def load_model() -> Model:
 
 def main():
     model = load_model()
-    pprint(model.predict("counts lines in foo.txt"))
+    for pred in model.predict("counts lines in all shap files"):
+        print("---")
+        print(pred.cmd)
+        print(pred.prob)
+        print(pred.debug)
 
 
 if __name__ == "__main__":
