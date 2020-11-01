@@ -82,7 +82,6 @@ def get_predictions(nlc2cmd_dl):
 
 
 def get_score(prediction_scores):
-
     score = -1.0
     if len(prediction_scores) == 0:
         return score

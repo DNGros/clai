@@ -1,5 +1,8 @@
 from pathlib import Path
 import sys
+
+from predictionpruning import prune_predictions
+
 sys.path.append(str(Path(__file__).parent.absolute()))
 sys.path.append(str(Path(__file__).parent.absolute() / "lib"))
 print(sys.path)
@@ -45,7 +48,7 @@ def predict(invocations, result_cnt=5):
     commands = []
     confidences = []
     for nl in invocations:
-        predictions = model.predict(nl, n=result_cnt)
+        predictions = prune_predictions(model.predict(nl, n=result_cnt*3), max_cnt=result_cnt)
         commands.append([
             pred.cmd for pred in predictions
         ])
