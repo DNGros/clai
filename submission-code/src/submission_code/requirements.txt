@@ -1,0 +1,3 @@
+/nlc2cmd/src/submission_code/lib/frustrate/vec4ir
+numpy
+attrs

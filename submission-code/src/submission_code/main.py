@@ -1,3 +1,12 @@
+from pathlib import Path
+import sys
+sys.path.append(str(Path(__file__).parent.absolute()))
+sys.path.append(str(Path(__file__).parent.absolute() / "lib"))
+print(sys.path)
+
+from irtoy import load_model
+
+
 def predict(invocations, result_cnt=5):
     """ 
     Function called by the evaluation script to interface the participants model
@@ -31,24 +40,16 @@ def predict(invocations, result_cnt=5):
     ################################################################################################
     #     Participants should add their codes to fill predict `commands` and `confidences` here    #
     ################################################################################################
+    model = load_model()
 
-    print("LEN", len(invocations))
-    print(invocations)
     commands = []
     confidences = []
     for nl in invocations:
+        predictions = model.predict(nl, n=result_cnt)
         commands.append([
-            "find",
-            "ls",
-            "rm",
-            "find | xargs",
-            "grep"
+            pred.cmd for pred in predictions
         ])
-        confidences.append([1.0] * 5)
-    print("LEN c", len(commands))
-    print("LEN con", len(confidences))
-
-
+        confidences.append([1.0] * result_cnt)
 
     ################################################################################################
     #                               Participant code block ends                                    #
