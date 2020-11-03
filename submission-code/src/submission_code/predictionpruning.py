@@ -3,6 +3,7 @@ import innereval.utils.metric_utils
 
 from modeling import Prediction
 
+
 def compute_metric(pred, gt):
     return innereval.utils.metric_utils.compute_metric(
         predicted_cmd=pred,

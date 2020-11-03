@@ -1,4 +1,6 @@
 from typing import List, Tuple
+from pathlib import Path
+import pickle
 
 from vec4ir.base import Matching, Tfidf
 from pprint import pprint
@@ -7,6 +9,10 @@ from vec4ir.core import Retrieval
 from datacleaning import normalize_nl
 from modeling import Model, Prediction
 from readdata import get_all_data, ACDataset
+
+
+save_file = Path(Path(__file__).parent / "modelsave.pkl").absolute()
+
 
 
 class ToyIRModel(Model):
@@ -32,7 +38,7 @@ class ToyIRModel(Model):
         ], key=lambda pred: pred.prob, reverse=True)[:n]
 
 
-def load_model() -> Model:
+def build_ir_model() -> Model:
     data = get_all_data()
     matching_op = Matching()
     tfidf = Tfidf()
@@ -48,9 +54,19 @@ def load_model() -> Model:
     return ToyIRModel(retrieval, data)
 
 
+def cache_model(model: Model) -> None:
+    with save_file.open("wb") as fp:
+        pickle.dump(model, fp)
+
+
+def load_model() -> Model:
+    with save_file.open("rb") as fp:
+        return pickle.load(fp)
+
+
 def main():
     model = load_model()
-    for pred in model.predict("counts lines in all shap files"):
+    for pred in model.predict("counts lines in all shap files pid 3255"):
         print("---")
         print(pred.cmd)
         print(pred.prob)
@@ -58,4 +74,6 @@ def main():
 
 
 if __name__ == "__main__":
+    #build_ir_model()
     main()
+    #main()

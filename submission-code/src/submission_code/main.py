@@ -1,13 +1,14 @@
 from pathlib import Path
 import sys
 
-from predictionpruning import prune_predictions
-
 sys.path.append(str(Path(__file__).parent.absolute()))
 sys.path.append(str(Path(__file__).parent.absolute() / "lib"))
 print(sys.path)
 
+from predictionpruning import prune_predictions
 from irtoy import load_model
+
+model = load_model()
 
 
 def predict(invocations, result_cnt=5):
@@ -43,7 +44,6 @@ def predict(invocations, result_cnt=5):
     ################################################################################################
     #     Participants should add their codes to fill predict `commands` and `confidences` here    #
     ################################################################################################
-    model = load_model()
 
     commands = []
     confidences = []

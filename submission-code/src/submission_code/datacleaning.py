@@ -4,7 +4,7 @@ replacer_re = re.compile(r"\[-\[(\d*=)?\w+\]-\]")
 
 
 def normalize_nl(nl: str) -> str:
-    return replace_files(cheap_replacers(nl))
+    return replace_numbers(replace_files(cheap_replacers(nl)))
 
 
 def replace_cmd(cmd: str) -> str:
@@ -41,6 +41,16 @@ def replace_files(s: str):
             continue
         out_words.append(unquoted_word)
     return " ".join(out_words)
+
+
+def replace_numbers(s: str):
+    def isnum(w: str):
+         return w.isdigit()
+
+    return " ".join([
+        word if not isnum(word) else "CONSTNUMBER"
+        for word in s.split()
+    ])
 
 
 
