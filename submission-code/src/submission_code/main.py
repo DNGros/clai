@@ -12,7 +12,7 @@ model = load_model()
 
 
 def predict_one(nl, model, result_cnt=5):
-    predictions = prune_predictions(model.predict(nl, n=result_cnt * 2), max_cnt=result_cnt)
+    predictions = prune_predictions(model.predict(nl, n=result_cnt * 3), max_cnt=result_cnt)
     cmds = [
         pred.cmd for pred in predictions
     ]
