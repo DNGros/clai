@@ -2,9 +2,12 @@ from typing import List
 import innereval.utils.metric_utils
 
 from modeling import Prediction
+import numpy as np
 
 
-def compute_metric(pred, gt):
+def compute_metric(pred: str, gt: str) -> float:
+    if pred == gt:
+        return 1
     return innereval.utils.metric_utils.compute_metric(
         predicted_cmd=pred,
         predicted_confidence=1.0,
@@ -13,9 +16,18 @@ def compute_metric(pred, gt):
     )
 
 
+def compute_metric_grid(preds: List[str]) -> np.ndarray:
+    grid = np.ndarray((len(preds), len(preds)))
+    for pi, p in enumerate(preds):
+        for gi, gt in enumerate(preds):
+            grid[pi, gi] = compute_metric(p, gt)
+    return grid
+
+
 def prune_predictions(predictions: List[Prediction], max_cnt=5):
     predictions.sort(key=lambda pred: pred.prob, reverse=True)
     return _prune_duplicates(predictions, max_cnt=max_cnt)
+
 
 
 def _prune_duplicates(predictions: List[Prediction], max_cnt=5):
@@ -30,5 +42,6 @@ def _prune_duplicates(predictions: List[Prediction], max_cnt=5):
 
 
 if __name__ == "__main__":
-    print(compute_metric("ls -l", "ls -S"))
-    print(compute_metric("ls -lS", "ls -S"))
+    print(compute_metric("ls -la", "ls -S"))
+    print(compute_metric("ls -S", "ls -la"))
+    print(compute_metric_grid(["ls -la", "wc -l", "ls -Sa", "cat foo.txt | wc -l"]))
