@@ -26,7 +26,7 @@ class DataItem:
 
 @attr.s(auto_attribs=True, frozen=True)
 class ACDataset:
-    examples: Tuple[DataItem]
+    examples: Tuple[DataItem, ...]
 
 
 def get_nl2bash_data() -> List[DataItem]:

@@ -11,6 +11,15 @@ from irtoy import load_model
 model = load_model()
 
 
+def predict_one(nl, model, result_cnt=5):
+    predictions = prune_predictions(model.predict(nl, n=result_cnt * 2), max_cnt=result_cnt)
+    cmds = [
+        pred.cmd for pred in predictions
+    ]
+    confs = [1.0] * result_cnt
+    return cmds, confs
+
+
 def predict(invocations, result_cnt=5):
     """ 
     Function called by the evaluation script to interface the participants model
@@ -48,11 +57,9 @@ def predict(invocations, result_cnt=5):
     commands = []
     confidences = []
     for nl in invocations:
-        predictions = prune_predictions(model.predict(nl, n=result_cnt*3), max_cnt=result_cnt)
-        commands.append([
-            pred.cmd for pred in predictions
-        ])
-        confidences.append([1.0] * result_cnt)
+        cmds, confs = predict_one(nl, model, result_cnt=result_cnt)
+        commands.append(cmds)
+        confidences.append(confs)
 
     ################################################################################################
     #                               Participant code block ends                                    #

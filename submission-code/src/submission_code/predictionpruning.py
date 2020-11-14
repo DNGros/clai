@@ -24,10 +24,21 @@ def compute_metric_grid(preds: List[str]) -> np.ndarray:
     return grid
 
 
-def prune_predictions(predictions: List[Prediction], max_cnt=5):
+def prune_predictions(predictions: List[Prediction], max_cnt=5) -> List[Prediction]:
     predictions.sort(key=lambda pred: pred.prob, reverse=True)
-    return _prune_duplicates(predictions, max_cnt=max_cnt)
+    #return _prune_duplicates(predictions, max_cnt=max_cnt)
+    return _prune_duplicate_strs(predictions, max_cnt=max_cnt)
 
+
+def _prune_duplicate_strs(predictions: List[Prediction], max_cnt=5) -> List[Prediction]:
+    seen = set()
+    out = []
+    for pred in predictions:
+        if pred.cmd not in seen:
+            out.append(pred)
+        if len(out) == max_cnt:
+            return out
+    return out
 
 
 def _prune_duplicates(predictions: List[Prediction], max_cnt=5):

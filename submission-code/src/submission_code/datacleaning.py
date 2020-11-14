@@ -53,13 +53,11 @@ def replace_numbers(s: str):
     ])
 
 
-
 def unqote(s: str):
     for q in ('"', "'"):
         if s.startswith(q) and s.endswith(q):
             return True, s[1:-1]
     return False, s
-
 
 
 common_exts = (".sh", ".py", ".txt", ".gz", ".png", ".tmp", ".xml", ".zip",

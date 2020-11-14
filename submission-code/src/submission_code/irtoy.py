@@ -38,8 +38,15 @@ class ToyIRModel(Model):
         ], key=lambda pred: pred.prob, reverse=True)[:n]
 
 
-def build_ir_model() -> Model:
-    data = get_all_data()
+def build_model_all_data() -> Model:
+    return build_ir_model(get_all_data())
+
+
+def build_model(data: ACDataset) -> Model:
+    return build_ir_model(data)
+
+
+def build_ir_model(data) -> Model:
     matching_op = Matching()
     tfidf = Tfidf()
     retrieval = Retrieval(retrieval_model=tfidf, matching=matching_op)
