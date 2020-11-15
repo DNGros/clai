@@ -2,6 +2,7 @@ import sklearn
 import statistics
 
 from fake_main import predict_subset
+from innereval.evaluate import compute_metric_cache
 from readdata import get_all_data, ACDataset
 import evaluate
 from tqdm import tqdm
@@ -17,22 +18,18 @@ def compute_score(ground_truths, predicted_cmds, predicted_confds, metric_params
                 continue
 
             predicted_confidence = predicted_confds[i]
-            pair_score = evaluate.compute_metric(predicted_cmd, predicted_confidence, grnd_truth_cmd, metric_params)
+            #pair_score = evaluate.compute_metric(predicted_cmd, predicted_confidence, grnd_truth_cmd, metric_params)
+            pair_score = compute_metric_cache(predicted_cmd, predicted_confidence, grnd_truth_cmd)
             prediction_scores.append(pair_score)
 
     score = evaluate.get_score(prediction_scores)
-
-    #print('-' * 50)
-    #print(f'Ground truth: {ground_truths}')
-    #print(f'Predictions: {predicted_cmds}')
-    #print(f'Score: {score}')
 
     return score
 
 
 def predict_on(data, seed=42):
-    train, test = split_dataset(data, seed=seed)
-    cmds, confs = predict_subset(train, test)
+    train, test = split_dataset(data, seed=seed, train_size=.95)
+    cmds, confs = predict_subset(train, test, print_exs=False)
     assert len(cmds) == len(confs) == len(test.examples)
     scores = [
         compute_score([test.examples[i].cmd], cmds[i], confs[i], {"u1": 1.0, "u2": 1.0})
@@ -47,7 +44,9 @@ def main():
     data = get_all_data()
     split_results = [
         predict_on(data, seed) for
-        seed in range(10)
+        #seed in range(10)
+        seed in range(5)
+        #seed in range(1)
     ]
     print(split_results)
     print("mean all splits", statistics.mean(split_results))

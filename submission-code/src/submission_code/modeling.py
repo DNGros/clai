@@ -10,6 +10,13 @@ class Prediction:
     prob: float
     debug: str
 
+    def dump_str(self) -> str:
+        return "Prediction(\n" + "\n".join([
+            f"\tprob: {self.prob:.4f}",
+            f"\tcmd: {self.cmd}",
+            f"\tdebug: {self.debug}",
+        ]) + ")"
+
 
 class Model(ABC):
     @abstractmethod

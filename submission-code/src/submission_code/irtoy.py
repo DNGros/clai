@@ -22,7 +22,7 @@ class ToyIRModel(Model):
 
     def predict(self, invocation: str, n=10) -> List[Prediction]:
         query = normalize_nl(invocation)
-        print(query)
+        #print(query)
         top_inds, scores = self.inner_model.query(
             query,
             k=n*2,

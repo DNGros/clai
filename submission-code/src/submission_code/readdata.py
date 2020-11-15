@@ -1,10 +1,11 @@
 import json
 from pathlib import Path
-import sys
-from typing import Set, List, Tuple
+from typing import List, Tuple
+from tqdm import tqdm
 import attr
 
 from datacleaning import normalize_nl, replace_cmd
+from innereval.evaluate import parse_cache
 
 cur_file = Path(__file__).parent.absolute()
 
@@ -32,7 +33,9 @@ class ACDataset:
 def get_nl2bash_data() -> List[DataItem]:
     with open(cur_file / "nl2bash-data.json", 'r') as f:
         data = [
-            DataItem(item['invocation'], normalize_nl(item['invocation']), item['cmd'], "nl2bash")
+            DataItem(
+                item['invocation'], normalize_nl(item['invocation']), item['cmd'], "nl2bash",
+            )
             for id, item in json.load(f).items()
         ]
     return data
@@ -54,15 +57,24 @@ def get_ainix_data() -> List[DataItem]:
     return data
 
 
-def get_all_data() -> ACDataset:
-    return ACDataset(examples=tuple(
+def get_all_data(preparse: bool = True) -> ACDataset:
+    data = ACDataset(examples=tuple(
         get_nl2bash_data() +
         get_ainix_data()
     ))
+    preparse_all_dataset(data)
+    return data
+
+
+def preparse_all_dataset(dataset: ACDataset):
+    for ex in tqdm(dataset.examples, desc="Preparsing dataset"):
+        parse_cache.parse(ex.cmd)
 
 
 def main():
-    print(list(get_all_data().examples)[:10])
+    data = get_all_data()
+    print(list(data.examples)[:10])
+    preparse_all_dataset(data)
 
 
 if __name__ == "__main__":

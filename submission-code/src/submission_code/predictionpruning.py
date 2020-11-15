@@ -1,33 +1,62 @@
 from typing import List
+from scipy.special import softmax
+from pprint import pprint
 import innereval.utils.metric_utils
+from innereval.evaluate import compute_metric_cache
 
 from modeling import Prediction
 import numpy as np
 
-
-def compute_metric(pred: str, gt: str) -> float:
-    if pred == gt:
-        return 1
-    return innereval.utils.metric_utils.compute_metric(
-        predicted_cmd=pred,
-        predicted_confidence=1.0,
-        ground_truth_cmd=gt,
-        metric_params={"u1": 1, "u2": 1}
-    )
+#from ortoy import optimize_selections
+from orbrute import find_best_combo
 
 
 def compute_metric_grid(preds: List[str]) -> np.ndarray:
     grid = np.ndarray((len(preds), len(preds)))
     for pi, p in enumerate(preds):
-        for gi, gt in enumerate(preds):
-            grid[pi, gi] = compute_metric(p, gt)
+        for gi, gt in enumerate(preds[pi:], pi):
+            s = compute_metric_cache(p, 1.0, gt)
+            grid[pi, gi] = s
+            grid[gi, pi] = s
     return grid
 
 
 def prune_predictions(predictions: List[Prediction], max_cnt=5) -> List[Prediction]:
     predictions.sort(key=lambda pred: pred.prob, reverse=True)
-    return _prune_duplicates(predictions, max_cnt=max_cnt)
+    #return _prune_duplicates(predictions, max_cnt=max_cnt)
     #return _prune_duplicate_strs(predictions, max_cnt=max_cnt)
+    return prune_optimized(_prune_duplicates(predictions, len(predictions)), max_cnt=max_cnt)
+
+
+def prune_optimized(predictions: List[Prediction], max_cnt=5) -> List[Prediction]:
+    #print(f"Predictions:")
+    #print("\n".join([f"{i}: {pred.dump_str()}" for i, pred in enumerate(predictions)]))
+    if len(predictions) <= max_cnt:
+        return predictions
+    grid = compute_metric_grid([pred.cmd for pred in predictions])
+    probs = np.array([pred.prob for pred in predictions])
+    #print(grid)
+    #print(list(probs))
+    #probs /= probs.sum()
+    scale_prob = probs**4
+    probs = scale_prob / scale_prob.sum()
+    #print("norm prob", probs)
+    grid_withprob = grid * probs[:, None]
+    optimal_picks, optimal_confs, expected_val = find_best_combo(grid_withprob)
+    if optimal_picks is None:
+        print("FAIL TO OPTIMIZE")
+        return predictions[:min(max_cnt, len(predictions))]
+    if optimal_confs[-1] not in (0.0, 1.0):
+        print(optimal_picks, optimal_confs, expected_val)
+    return [
+        #predictions[i]
+        Prediction(
+            predictions[pick_i].cmd,
+            conf,
+            predictions[pick_i].debug,
+        )
+        for pick_i, conf in zip(optimal_picks, optimal_confs)
+    ]
 
 
 def _prune_duplicate_strs(predictions: List[Prediction], max_cnt=5) -> List[Prediction]:
@@ -44,7 +73,10 @@ def _prune_duplicate_strs(predictions: List[Prediction], max_cnt=5) -> List[Pred
 def _prune_duplicates(predictions: List[Prediction], max_cnt=5):
     out = []
     for pred in predictions:
-        havent_seen_before = all(o.cmd != pred.cmd and compute_metric(pred.cmd, o.cmd) < 1 for o in out)
+        havent_seen_before = all(
+            o.cmd != pred.cmd and compute_metric_cache(pred.cmd, 1, o.cmd) < 1
+            for o in out
+        )
         if havent_seen_before:
             out.append(pred)
         if len(out) == max_cnt:
@@ -53,6 +85,6 @@ def _prune_duplicates(predictions: List[Prediction], max_cnt=5):
 
 
 if __name__ == "__main__":
-    print(compute_metric("ls -la", "ls -S"))
-    print(compute_metric("ls -S", "ls -la"))
+    print(compute_metric_cache("ls -la", 1.0, "ls -S"))
+    print(compute_metric_cache("ls -S", 1.0, "ls -la"))
     print(compute_metric_grid(["ls -la", "wc -l", "ls -Sa", "cat foo.txt | wc -l"]))
