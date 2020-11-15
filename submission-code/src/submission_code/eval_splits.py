@@ -23,6 +23,7 @@ def compute_score(ground_truths, predicted_cmds, predicted_confds, metric_params
             predicted_confidence = predicted_confds[i]
             #pair_score = evaluate.compute_metric(predicted_cmd, predicted_confidence, grnd_truth_cmd, metric_params)
             pair_score = compute_metric_cache(predicted_cmd, predicted_confidence, grnd_truth_cmd)
+            #pair_score = max(0, pair_score)
             prediction_scores.append(pair_score)
 
     score = evaluate.get_score(prediction_scores)
@@ -53,7 +54,8 @@ def main():
     split_results = [
         predict_on(data, seed) for
         #seed in range(10)
-        seed in range(5)
+        #seed in range(5)
+        seed in range(20)
         #seed in range(1)
     ]
     print(split_results)

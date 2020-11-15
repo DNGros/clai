@@ -23,17 +23,17 @@ def compute_metric_grid(preds: List[str]) -> np.ndarray:
 
 def prune_predictions(predictions: List[Prediction], max_cnt=5) -> List[Prediction]:
     predictions.sort(key=lambda pred: pred.score, reverse=True)
-    #return _prune_duplicates(predictions, max_cnt=max_cnt)
+    predictions = _prune_duplicates(predictions, max_cnt=max_cnt)
     #return _prune_duplicate_strs(predictions, max_cnt=max_cnt)
-    predictions = prune_optimized(_prune_duplicates(predictions, len(predictions)), max_cnt=max_cnt)
+    #predictions = prune_optimized(_prune_duplicates(predictions, len(predictions)), max_cnt=max_cnt)
+    #return predictions
     return pad_predictions(predictions)
 
 
 def pad_predictions(predictions, max_cnt=5):
     if len(predictions) < max_cnt:
-        return predictions + ([Prediction("padcmd", 0.0, 0.0, "pad")] * (len(predictions) - max_cnt))
+        return predictions + ([Prediction("find pad", 0.0, 0.005, "pad")] * (len(predictions) - max_cnt))
     return predictions
-    pass
 
 
 def prune_optimized(predictions: List[Prediction], max_cnt=5) -> List[Prediction]:
@@ -46,7 +46,7 @@ def prune_optimized(predictions: List[Prediction], max_cnt=5) -> List[Prediction
     #print(grid)
     #print(list(probs))
     #probs /= probs.sum()
-    scale_prob = pred_scores**4
+    scale_prob = pred_scores**5
     probs = scale_prob / scale_prob.sum()
     #print("norm prob", probs)
     grid_withprob = grid * probs[:, None]
@@ -57,7 +57,7 @@ def prune_optimized(predictions: List[Prediction], max_cnt=5) -> List[Prediction
     if optimal_picks is None:
         print("FAIL TO OPTIMIZE")
         return predictions[:min(max_cnt, len(predictions))]
-    print(optimal_picks, optimal_confs, expected_val)
+    #print(optimal_picks, optimal_confs, expected_val)
     return [
         #predictions[i]
         Prediction(

@@ -21,9 +21,9 @@ def find_best_combo(costs, other_prob: float):
             for i2 in range(i1 + 1, min(10, total_options - num_vars + 3)):
                 for i3 in range(i2 + 1, min(13, total_options - num_vars + 4)):
                     for i4 in range(i3 + 1, min(16, total_options - num_vars + 5)):
-                        for p2 in (0.0, 1.0):
-                            for p3 in (0.0, 1.0):
-                                for p4 in (0.0, 0.5, 1.0):
+                        for p2 in (0.05, 1.0):
+                            for p3 in (0.05, 1.0):
+                                for p4 in (0.05, 1.0):
                                     # all the indents (this is disgusting...)
                                     expected_value = 0.0
                                     for gt in range(total_options):

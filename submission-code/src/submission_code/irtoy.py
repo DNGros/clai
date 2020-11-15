@@ -8,8 +8,7 @@ from vec4ir.core import Retrieval
 
 from datacleaning import normalize_nl
 from modeling import Model, Prediction
-from readdata import get_all_data, ACDataset
-
+from readdata import get_all_data, ACDataset, preparse_all_dataset
 
 save_file = Path(Path(__file__).parent / "modelsave.pkl").absolute()
 
@@ -69,7 +68,9 @@ def cache_model(model: Model) -> None:
 
 def load_model() -> Model:
     with save_file.open("rb") as fp:
-        return pickle.load(fp)
+        model = pickle.load(fp)
+    preparse_all_dataset(model.data)
+    return model
 
 
 def main():
