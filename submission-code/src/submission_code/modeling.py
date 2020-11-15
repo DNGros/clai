@@ -7,12 +7,14 @@ import attr
 @attr.s(frozen=True, auto_attribs=True)
 class Prediction:
     cmd: str
-    prob: float
+    score: float
+    eval_prob: float
     debug: str
 
     def dump_str(self) -> str:
         return "Prediction(\n" + "\n".join([
-            f"\tprob: {self.prob:.4f}",
+            f"\tscore: {self.score:.4f}",
+            f"\teval_prob: {self.eval_prob:.4f}",
             f"\tcmd: {self.cmd}",
             f"\tdebug: {self.debug}",
         ]) + ")"

@@ -31,6 +31,9 @@ def test_parse_slack():
 
 
 def test_parse_slack2():
-    """The example Parth Thar mentioned on slack"""
     is_same("find -type f -name $(echo -n 'foo')", "find -type f -name foo | echo bar")
+    
+    
+def test_parse_other():
+    is_same("find $HOME -name '*.ogg' -type f -exec du -h '{}' \;", "find $HOME -iname '*.ogg' -type f -size -100M")
 

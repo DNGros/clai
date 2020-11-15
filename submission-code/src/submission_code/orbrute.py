@@ -5,8 +5,8 @@ import numpy as np
 from numba import jit
 
 
-@jit(nopython=True)
-def find_best_combo(costs):
+@jit(nopython=True, fastmath=True)
+def find_best_combo(costs, other_prob: float):
     best_cost = -999999.9
     total_options = len(costs)
     num_vars = 5
@@ -23,7 +23,7 @@ def find_best_combo(costs):
                     for i4 in range(i3 + 1, min(16, total_options - num_vars + 5)):
                         for p2 in (0.0, 1.0):
                             for p3 in (0.0, 1.0):
-                                for p4 in (0.0, 1.0):
+                                for p4 in (0.0, 0.5, 1.0):
                                     # all the indents (this is disgusting...)
                                     expected_value = 0.0
                                     for gt in range(total_options):
@@ -40,6 +40,9 @@ def find_best_combo(costs):
                                                 + costs[gt, i3] * p3
                                                 + costs[gt, i4] * p4
                                                               ) / num_vars
+                                    expected_value = (
+                                        expected_value * (1 - other_prob) +
+                                        (-1 * ((p0 + p1 + p2 + p3 + p4) / 5) * other_prob))
                                     if expected_value > best_cost:
                                         best_choice = [i0, i1, i2, i3, i4]
                                         best_confidences = [p0, p1, p2, p3, p4]
@@ -53,7 +56,7 @@ find_best_combo(np.array([
     [0.0, 0.2, 1.0, 0.0, 0.0],
     [0.0, 0.2, 0.0, 1.0, 0.0],
     [0.0, 0.0, 0.0, 0.0, 1.0],
-]))
+]), 0.0)
 
 
 

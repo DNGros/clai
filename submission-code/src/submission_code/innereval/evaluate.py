@@ -18,8 +18,6 @@ from bashlint import data_tools, nast
 from bashlint.data_tools import bash_parser
 
 
-
-
 def get_score(prediction_scores):
     score = -1.0
     if len(prediction_scores) == 0:
@@ -109,7 +107,7 @@ class PreparseCache:
         cache_result = self._cache.get(string, None)
         if cache_result is not None:
             return cache_result
-        val =  make_preparse(string)
+        val = make_preparse(string)
         if len(self._cache) < self._max_size:
             self._cache[string] = val
         return val

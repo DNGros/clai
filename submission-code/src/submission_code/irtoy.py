@@ -25,17 +25,18 @@ class ToyIRModel(Model):
         #print(query)
         top_inds, scores = self.inner_model.query(
             query,
-            k=n*2,
+            k=n,
             return_scores=True
         )
         return sorted([
             Prediction(
                 self.data.examples[ind].cmd,
                 score*self.data.examples[ind].pref_weight,
-                str(self.data.examples[ind])
+                eval_prob=1.0,
+                debug=str(self.data.examples[ind])
             )
             for ind, score in zip(top_inds, scores)
-        ], key=lambda pred: pred.prob, reverse=True)[:n]
+        ], key=lambda pred: pred.score, reverse=True)[:n]
 
 
 def build_model_all_data() -> Model:

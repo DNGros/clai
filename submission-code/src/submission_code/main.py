@@ -16,7 +16,7 @@ def predict_one(nl, model, result_cnt=5):
     cmds = [
         pred.cmd for pred in predictions
     ]
-    confs = [1.0] * result_cnt
+    confs = [pred.eval_prob for pred in predictions]
     return cmds, confs
 
 

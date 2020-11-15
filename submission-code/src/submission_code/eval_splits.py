@@ -8,6 +8,9 @@ import evaluate
 from tqdm import tqdm
 
 
+DEBUG_PRINT = False
+
+
 def compute_score(ground_truths, predicted_cmds, predicted_confds, metric_params):
     prediction_scores = []
 
@@ -23,13 +26,18 @@ def compute_score(ground_truths, predicted_cmds, predicted_confds, metric_params
             prediction_scores.append(pair_score)
 
     score = evaluate.get_score(prediction_scores)
+    #print('-' * 50)
+    #print(f'Ground truth: {ground_truths}')
+    #print(f'Predictions: {predicted_cmds}')
+    #print(f'Score: {score}')
 
     return score
 
 
 def predict_on(data, seed=42):
     train, test = split_dataset(data, seed=seed, train_size=.95)
-    cmds, confs = predict_subset(train, test, print_exs=False)
+
+    cmds, confs = predict_subset(train, test, print_exs=DEBUG_PRINT)
     assert len(cmds) == len(confs) == len(test.examples)
     scores = [
         compute_score([test.examples[i].cmd], cmds[i], confs[i], {"u1": 1.0, "u2": 1.0})

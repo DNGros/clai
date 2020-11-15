@@ -22,10 +22,18 @@ def compute_metric_grid(preds: List[str]) -> np.ndarray:
 
 
 def prune_predictions(predictions: List[Prediction], max_cnt=5) -> List[Prediction]:
-    predictions.sort(key=lambda pred: pred.prob, reverse=True)
+    predictions.sort(key=lambda pred: pred.score, reverse=True)
     #return _prune_duplicates(predictions, max_cnt=max_cnt)
     #return _prune_duplicate_strs(predictions, max_cnt=max_cnt)
-    return prune_optimized(_prune_duplicates(predictions, len(predictions)), max_cnt=max_cnt)
+    predictions = prune_optimized(_prune_duplicates(predictions, len(predictions)), max_cnt=max_cnt)
+    return pad_predictions(predictions)
+
+
+def pad_predictions(predictions, max_cnt=5):
+    if len(predictions) < max_cnt:
+        return predictions + ([Prediction("padcmd", 0.0, 0.0, "pad")] * (len(predictions) - max_cnt))
+    return predictions
+    pass
 
 
 def prune_optimized(predictions: List[Prediction], max_cnt=5) -> List[Prediction]:
@@ -34,26 +42,29 @@ def prune_optimized(predictions: List[Prediction], max_cnt=5) -> List[Prediction
     if len(predictions) <= max_cnt:
         return predictions
     grid = compute_metric_grid([pred.cmd for pred in predictions])
-    probs = np.array([pred.prob for pred in predictions])
+    pred_scores = np.array([pred.score for pred in predictions])
     #print(grid)
     #print(list(probs))
     #probs /= probs.sum()
-    scale_prob = probs**4
+    scale_prob = pred_scores**4
     probs = scale_prob / scale_prob.sum()
     #print("norm prob", probs)
     grid_withprob = grid * probs[:, None]
-    optimal_picks, optimal_confs, expected_val = find_best_combo(grid_withprob)
+
+    other_prob = (1 - max(pred_scores))**2
+
+    optimal_picks, optimal_confs, expected_val = find_best_combo(grid_withprob, other_prob)
     if optimal_picks is None:
         print("FAIL TO OPTIMIZE")
         return predictions[:min(max_cnt, len(predictions))]
-    if optimal_confs[-1] not in (0.0, 1.0):
-        print(optimal_picks, optimal_confs, expected_val)
+    print(optimal_picks, optimal_confs, expected_val)
     return [
         #predictions[i]
         Prediction(
             predictions[pick_i].cmd,
-            conf,
-            predictions[pick_i].debug,
+            score=predictions[pick_i].score,
+            eval_prob=conf,
+            debug=predictions[pick_i].debug,
         )
         for pick_i, conf in zip(optimal_picks, optimal_confs)
     ]

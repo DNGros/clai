@@ -62,7 +62,8 @@ def get_all_data(preparse: bool = True) -> ACDataset:
         get_nl2bash_data() +
         get_ainix_data()
     ))
-    preparse_all_dataset(data)
+    if preparse:
+        preparse_all_dataset(data)
     return data
 
 
