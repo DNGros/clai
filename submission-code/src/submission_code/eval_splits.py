@@ -55,8 +55,8 @@ def main():
         predict_on(data, seed) for
         #seed in range(10)
         #seed in range(5)
+        #seed in range(20)
         seed in range(20)
-        #seed in range(1)
     ]
     print(split_results)
     print("mean all splits", statistics.mean(split_results))

@@ -1,4 +1,5 @@
 import argparse
+import attr
 import numpy as np
 import time
 import os
@@ -11,7 +12,6 @@ from innereval.utils.metric_utils import compute_metric, get_utility_nodes, get_
 from innereval.utils.dataset import Nlc2CmdDS
 from innereval.utils.dataloaders import Nlc2CmdDL
 
-from dataclasses import dataclass
 from typing import List, Set
 
 from bashlint import data_tools, nast
@@ -33,7 +33,7 @@ def get_score(prediction_scores):
     return score
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class Preparse:
     utility_names: List[str]
     flag_nodes: List[Set[str]]

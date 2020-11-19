@@ -6,9 +6,10 @@ sys.path.append(str(Path(__file__).parent.absolute() / "lib"))
 print(sys.path)
 
 from predictionpruning import prune_predictions
-from irtoy import load_model
+from irtoy import load_model, build_model_all_data
 
 model = load_model()
+#model = build_model_all_data()
 
 
 def predict_one(nl, model, result_cnt=5):
@@ -17,7 +18,7 @@ def predict_one(nl, model, result_cnt=5):
         pred.cmd for pred in predictions
     ]
     confs = [pred.eval_prob for pred in predictions]
-    return cmds, confs
+    return cmds, confs, predictions
 
 
 def predict(invocations, result_cnt=5):
@@ -57,7 +58,7 @@ def predict(invocations, result_cnt=5):
     commands = []
     confidences = []
     for nl in invocations:
-        cmds, confs = predict_one(nl, model, result_cnt=result_cnt)
+        cmds, confs, _ = predict_one(nl, model, result_cnt=result_cnt)
         commands.append(cmds)
         confidences.append(confs)
 

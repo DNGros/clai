@@ -7,6 +7,7 @@ from pprint import pprint
 from vec4ir.core import Retrieval
 
 from datacleaning import normalize_nl
+from lib.vec4ir.word2vec import WordCentroidDistance
 from modeling import Model, Prediction
 from readdata import get_all_data, ACDataset, preparse_all_dataset
 
@@ -39,11 +40,12 @@ class ToyIRModel(Model):
 
 
 def build_model_all_data() -> Model:
-    return build_ir_model(get_all_data())
+    return build_model(get_all_data())
 
 
 def build_model(data: ACDataset) -> Model:
-    return build_ir_model(data)
+    #return build_ir_model(data)
+    return build_ir_vec_model(data)
 
 
 def build_ir_model(data) -> Model:
@@ -54,6 +56,28 @@ def build_ir_model(data) -> Model:
         X=[
             d.nl_norm for d in data.examples
         ],
+        #y=[
+        #    d.cmd for d in data.examples
+        #]
+    )
+    return ToyIRModel(retrieval, data)
+
+
+def build_ir_vec_model(data) -> Model:
+    from gensim.models import Word2Vec
+    matching_op = Matching()
+    #tfidf = Tfidf()
+    full_text = [
+        d.nl_norm for d in data.examples
+    ]
+    print("full text len", len(full_text))
+    model = Word2Vec(full_text, min_count=1)
+    print("MODEL", model)
+    wcd = WordCentroidDistance(model.wv, use_idf=True)
+    print("wcd", wcd)
+    retrieval = Retrieval(retrieval_model=wcd, matching=matching_op)
+    retrieval.fit(
+        X=full_text,
         #y=[
         #    d.cmd for d in data.examples
         #]

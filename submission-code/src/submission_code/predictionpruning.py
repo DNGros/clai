@@ -6,6 +6,7 @@ from innereval.evaluate import compute_metric_cache
 
 from modeling import Prediction
 import numpy as np
+from scipy.special import expit
 
 #from ortoy import optimize_selections
 from orbrute import find_best_combo
@@ -27,12 +28,47 @@ def prune_predictions(predictions: List[Prediction], max_cnt=5) -> List[Predicti
     #return _prune_duplicate_strs(predictions, max_cnt=max_cnt)
     #predictions = prune_optimized(_prune_duplicates(predictions, len(predictions)), max_cnt=max_cnt)
     #return predictions
+    #return predictions
+    #predictions = recalibrate(predictions)
     return pad_predictions(predictions)
+
+
+def recalibrate(predictions: List[Prediction]) -> List[Prediction]:
+    scores = [pred.score for pred in predictions]
+    score_sum = sum(scores)
+    score_max = max(scores)
+    prob_any_is_positive = expit(score_max * 3.22 + score_sum * 0.2 - 1.93)
+    prob_indv_is_positive = [
+        expit(score*3.88-3.34)
+        for score in scores
+    ]
+    prob_indv_is_neg = [
+        (1-prob_pos) if prob_pos < 0.1 else 0  # Square for extra benifit of the doubt
+        for prob_pos in prob_indv_is_positive
+    ]
+    prob_all_neg = (1 - prob_any_is_positive)
+    if prob_all_neg < 0.9:
+        prob_all_neg = 0
+    new_confs = [
+        1 - (prob_neg * prob_all_neg)
+        for prob_neg in prob_indv_is_neg
+    ]
+    #print("scores", scores, "new_congs", new_confs)
+    return [
+        Prediction(
+            pred.cmd,
+            score=pred.score,
+            eval_prob=new_conf,
+            debug=pred.debug,
+        )
+        for pred, new_conf in zip(predictions, new_confs)
+    ]
+
 
 
 def pad_predictions(predictions, max_cnt=5):
     if len(predictions) < max_cnt:
-        return predictions + ([Prediction("find pad", 0.0, 0.005, "pad")] * (len(predictions) - max_cnt))
+        return predictions + ([Prediction("find pad", 0.0, 0.005, "pad")] * (max_cnt - len(predictions)))
     return predictions
 
 
@@ -98,4 +134,12 @@ def _prune_duplicates(predictions: List[Prediction], max_cnt=5):
 if __name__ == "__main__":
     print(compute_metric_cache("ls -la", 1.0, "ls -S"))
     print(compute_metric_cache("ls -S", 1.0, "ls -la"))
-    print(compute_metric_grid(["ls -la", "wc -l", "ls -Sa", "cat foo.txt | wc -l"]))
+    a = compute_metric_grid([
+        "ls -l",
+        "ls -a",
+        "ls -la",
+        "ls -S",
+        "ls -Sa",
+        "find .",
+        "find . -type f"
+    ])
