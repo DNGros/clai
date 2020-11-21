@@ -1,8 +1,8 @@
 import sklearn
 import statistics
 
-from fake_main import predict_subset
-from innereval.evaluate import compute_metric_cache
+from fake_main import predict_subset, explore_worst_examples
+from innereval.evaluate import compute_metric_cache, make_preparse
 from readdata import get_all_data, ACDataset
 import evaluate
 from tqdm import tqdm
@@ -39,6 +39,7 @@ def predict_on(data, seed=42):
     train, test = split_dataset(data, seed=seed, train_size=.95)
 
     cmds, confs = predict_subset(train, test, print_exs=DEBUG_PRINT)
+    #cmds, confs = explore_worst_examples(train, test)
     assert len(cmds) == len(confs) == len(test.examples)
     scores = [
         compute_score([test.examples[i].cmd], cmds[i], confs[i], {"u1": 1.0, "u2": 1.0})
@@ -56,7 +57,7 @@ def main():
         #seed in range(10)
         #seed in range(5)
         #seed in range(20)
-        seed in range(20)
+        seed in range(5)
     ]
     print(split_results)
     print("mean all splits", statistics.mean(split_results))

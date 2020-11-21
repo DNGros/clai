@@ -1,9 +1,19 @@
 import shlex
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Iterable
 import re
+
+from nltk import PorterStemmer
+
 replacer_re = re.compile(r"\[-\[(\d*=)?\w+\]-\]")
 
 space_splitter_re = re.compile("( \(|\) |\)$|, | |\\\".*?\\\"|'.*?')")
+
+stop_words = {
+    "the", "in", "all", "and", "current", "of",
+    "to", "with", "for", ",", "a", "that"
+}
+
+
 
 
 def normalize_nl(nl: str) -> str:
@@ -12,7 +22,7 @@ def normalize_nl(nl: str) -> str:
     nl = cheap_replacers(nl)
     nl = word_by_word_expand(nl)
     #nl = replace_files(nl)
-    nl = replace_numbers(nl)
+    #nl = replace_numbers(nl)
     return nl
 
 
@@ -33,14 +43,18 @@ def pretokenize(string) -> List[str]:
 
 
 class CountingDict:
-    def __init__(self, prefix: str):
+    def __init__(self, prefix: str, max_count: int = 3):
         self._conversions = {}
         self._prefix = prefix
+        self._max_count = max_count
 
     def convert(self, val: str):
         if val in self._conversions:
             return self._conversions[val]
-        new_val = f"{self._prefix}{len(self._conversions)}"
+        val = len(self._conversions)
+        if val > self._max_count:
+            val = "MAX"
+        new_val = f"{self._prefix}{val}"
         self._conversions[val] = new_val
         return new_val
 
@@ -57,9 +71,9 @@ class NormState:
 def multi_expand_word(word: str, norm_state: NormState) -> List[str]:
     word_expands = []
     was_quoted, word = unquote(word)
-    for transform in (expand_file_word, expand_file_ext,
+    for transform in (expand_url, expand_file_word, expand_file_ext, expand_file_size,
                       expand_glob, expand_ip_addr, expand_bash_var,
-                      expand_slash_word):
+                      expand_slash_word, expand_number_word, expand_ordinal, expand_dash_word):
         word, new_expands = transform(word, norm_state)
         word_expands.extend(new_expands)
     if was_quoted:
@@ -76,12 +90,54 @@ def multi_expand_word(word: str, norm_state: NormState) -> List[str]:
     return word_expands
 
 
+url_words = ("://", ".com", "net", ".gov", ".edu")
+
+
+def expand_url(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
+    if any(url_word in word for url_word in url_words):
+        return "", ["CONSTURL"]
+    return word, []
+
+
+def expand_dash_word(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
+    dash_split = word.split("-")
+    if len(dash_split) > 1:
+        return "", [*dash_split, "WASDASHWORD"]
+    return word, []
+
+
+def expand_number_word(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
+    def isnum(w: str):
+        return w.isdigit()
+
+    expands = []
+    if isnum(word):
+        expands.append("CONSTNUMBER")
+        if len(word) < 3:
+            expands.append("CONSTONEORTWODIGIT")
+        if len(word) == 3:
+            expands.append("CONSTTHREEDIGIT")
+        if len(word) > 3:
+            expands.append("CONSTMORETHAN4")
+        return "", expands
+
+    return word, []
+
+
+def expand_file_size(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
+    for ext in ('kb', 'mb', 'gb', 'g', 'k', 'm', 'bytes'):
+        splited = word.lower().split(ext)
+        if len(splited) == 2 and len(splited[1]) == 0 and splited[0].isdigit():
+            return "", ["CONSTDATASIZE"]
+    return word, []
+
+
 def expand_file_word(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
     expands = []
     unquoted_word = word.lower()
     if norm_state.files_seen.has_seen(word) or looks_like_a_file(unquoted_word):
         expands.append(norm_state.files_seen.convert(word))
-        if "/" in word:
+        if "/" in word or 'dir' in word or 'folder' in word:
             expands.append("CONSTDIRLIKE")
         else:
             expands.append("CONSTNOTDIRLIKE")
@@ -133,6 +189,17 @@ def expand_bash_var(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
     return word, []
 
 
+ordinal_set = {
+    "first", "1st", "second", "2nd", "third", "3rd", "fourth", "4th", "fifth", "5th",
+    "sixth", "6th", "seventh", "7th", "eighth", "8th", "ninth", "9th", "tenth", "10th"
+}
+
+def expand_ordinal(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
+    if word in ordinal_set:
+        return "", ["CONSTORDINAL"]
+    return word, []
+
+
 def clean_punkt(nl: str) -> str:
     if nl[-1] in (".", "?"):
         nl = nl[:-1]
@@ -174,6 +241,9 @@ def replace_numbers(s: str):
     def isnum(w: str):
          return w.isdigit()
 
+    def const_for_number():
+        pass
+
     return " ".join([
         word if not isnum(word) else "CONSTNUMBER"
         for word in s.split()
@@ -189,15 +259,17 @@ def unquote(s: str):
 
 common_exts = {"sh", "py", "txt",  "png", "tmp",  "zip",
                "csv", "cpp", "h", 'html', 'go', 'sql', 'json', 'java', "tar", "alias",
-               "tar.gz", "php", 'js', "ml", "gz", "svn", "ogg"}
+               "tar.gz", "php", 'js', "ml", "gz", "svn", "ogg", 'jpg', 'jpeg', 'txt'}
 useful_ext = {"txt", "tar", "tar.gz", "java", "h", "zip", "py", "sh", "gz"}
 common_utils = {"cp", "sed", "mv", "tar", "mv", "rm"}
+file_name_esq = {"filename", "{filename}", "{file}", "[file]", '[filename]]', '$file', 'dir1', 'file1',
+                 'dir2', 'file2', 'folder1', 'folder2', 'somedirectory', "dir/"}
 
 
 def looks_like_a_file(string: str):
     """A super hacky heuristic function to guess if a string looks like a path"""
     was_quoted, string = unquote(string)
-    if string.lower() in ("filename", "{filename}", "{file}", "[file]", '[filename]]', 'file', '$file'):
+    if string.lower() in file_name_esq:
         return True
     if string.startswith("s/"):
         # Could be a sed expression. This is admittedly a crappy detection of this...
@@ -215,7 +287,11 @@ def looks_like_a_file(string: str):
         return True
     if string.startswith("./") or string.startswith("../"):
         return True
-    if string.count("/") >= 2:
+    slash_count = string.count("/")
+    has_dot = "." in string
+    if slash_count >= 1 and string.endswith("/"):
+        return True
+    if slash_count >= 2 or (slash_count == 1 and has_dot):
         return True
     if string.startswith("~/") and len(string) > len("~/"):
         return True
@@ -224,3 +300,18 @@ def looks_like_a_file(string: str):
     if string.startswith("/"):
         return True
     return False
+
+
+def filter_stop_words(words: Iterable[str]) -> Iterable[str]:
+    return (
+        word
+        for word in words
+        if word not in stop_words
+    )
+
+
+stemmer = PorterStemmer()
+
+
+def stem_words(words: Iterable[str]) -> Iterable[str]:
+    return (stemmer.stem(word) for word in words)

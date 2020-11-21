@@ -10,6 +10,11 @@ class Prediction:
     score: float
     eval_prob: float
     debug: str
+    debug_ref_nl: str = None
+    is_pad: bool = False
+
+    def __attrs_post_init__(self):
+        assert self.debug_ref_nl is not None or self.is_pad
 
     def dump_str(self) -> str:
         return "Prediction(\n" + "\n".join([

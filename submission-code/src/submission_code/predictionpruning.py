@@ -60,6 +60,7 @@ def recalibrate(predictions: List[Prediction]) -> List[Prediction]:
             score=pred.score,
             eval_prob=new_conf,
             debug=pred.debug,
+            debug_ref_nl=pred.debug_ref_nl,
         )
         for pred, new_conf in zip(predictions, new_confs)
     ]
@@ -68,7 +69,8 @@ def recalibrate(predictions: List[Prediction]) -> List[Prediction]:
 
 def pad_predictions(predictions, max_cnt=5):
     if len(predictions) < max_cnt:
-        return predictions + ([Prediction("find pad", 0.0, 0.005, "pad")] * (max_cnt - len(predictions)))
+        return predictions + (
+                [Prediction("find pad", 0.0, 0.005, "pad", is_pad=True)] * (max_cnt - len(predictions)))
     return predictions
 
 
@@ -101,6 +103,7 @@ def prune_optimized(predictions: List[Prediction], max_cnt=5) -> List[Prediction
             score=predictions[pick_i].score,
             eval_prob=conf,
             debug=predictions[pick_i].debug,
+            debug_ref_nl=predictions[pick_i].debug_ref_nl
         )
         for pick_i, conf in zip(optimal_picks, optimal_confs)
     ]

@@ -116,6 +116,10 @@ class PreparseCache:
 parse_cache = PreparseCache()
 
 
+def make_preparse_cached(cmd: str) -> Preparse:
+    return parse_cache.parse(cmd)
+
+
 def compute_metric_cache(predicted_cmd: str, predicted_confidence: float, ground_truth_cmd) -> float:
     return score_preparses(
         parse_cache.parse(predicted_cmd),

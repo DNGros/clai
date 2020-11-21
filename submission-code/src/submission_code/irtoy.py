@@ -33,7 +33,8 @@ class ToyIRModel(Model):
                 self.data.examples[ind].cmd,
                 score*self.data.examples[ind].pref_weight,
                 eval_prob=1.0,
-                debug=str(self.data.examples[ind])
+                debug=str(self.data.examples[ind]),
+                debug_ref_nl=self.data.examples[ind].nl
             )
             for ind, score in zip(top_inds, scores)
         ], key=lambda pred: pred.score, reverse=True)[:n]
@@ -44,8 +45,8 @@ def build_model_all_data() -> Model:
 
 
 def build_model(data: ACDataset) -> Model:
-    #return build_ir_model(data)
-    return build_ir_vec_model(data)
+    return build_ir_model(data)
+    #return build_ir_vec_model(data)
 
 
 def build_ir_model(data) -> Model:
