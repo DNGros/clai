@@ -6,4 +6,4 @@ Project is available under the GPLv3 license due to a dependency on [bashlex](ht
 
 However, all individual source files are available under [MIT license](https://opensource.org/licenses/MIT) (c) 2020 David Gros.
 
-Feel free to copy those and use under the terms of the license.
+Feel free to copy the modules that don't import bashlex and use those and use under the terms of the MIT license.
