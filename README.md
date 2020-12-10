@@ -1,4 +1,4 @@
-Fork from (IBM/clai)[https://github.com/IBM/clai/tree/2ad172acbed0c1ec870cc39f47635adea39f19c0]
+Fork from [IBM/clai](https://github.com/IBM/clai/tree/2ad172acbed0c1ec870cc39f47635adea39f19c0)
 
 # [NLC2CMD Challenge](http://ibm.biz/nlc2cmd) @ [NeurIPS 2020](https://neurips.cc/Conferences/2020/CompetitionTrack)
 
