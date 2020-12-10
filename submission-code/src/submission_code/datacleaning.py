@@ -15,7 +15,7 @@ stop_words = {
 
 OPEN_BRACKET = "constant"
 CLOSE_BRACKET = ""
-STEM = False
+STEM = True
 
 
 def normalize_nl(nl: str) -> str:
