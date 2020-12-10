@@ -1,0 +1,19 @@
+# toy_en_de.yaml
+
+## Where the samples will be written
+save_data: toy-ende/run/example
+## Where the vocab(s) will be written
+src_vocab: toy-ende/run/example.vocab.src
+tgt_vocab: toy-ende/run/example.vocab.tgt
+# Prevent overwriting existing files in the folder
+overwrite: False
+
+# Corpus opts:
+data:
+    corpus_1:
+        path_src: split1/train.nl.txt
+        path_tgt: split1/train.cmd.txt
+    valid:
+        path_src: split1/val.nl.txt
+        path_tgt: split1/val.cmd.txt
+...

@@ -1,0 +1,16 @@
+{
+    "models_root": "./available_models",
+    "models": [
+        {
+            "id": 0,
+            "model": "demo-model_step_1000.pt",
+            "timeout": 600,
+            "on_timeout": "to_cpu",
+            "load": true,
+            "opt": {
+                "beam_size": 5,
+                "n_best": 5
+            }
+        }
+    ]
+}

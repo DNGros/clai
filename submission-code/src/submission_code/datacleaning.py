@@ -10,10 +10,12 @@ space_splitter_re = re.compile("( \(|\) |\)$|, | |\\\".*?\\\"|'.*?')")
 
 stop_words = {
     "the", "in", "all", "and", "current", "of",
-    "to", "with", "for", ",", "a", "that"
+    "to", "with", "for", ",", "a", "that", "home"
 }
 
-
+OPEN_BRACKET = "constant"
+CLOSE_BRACKET = ""
+STEM = False
 
 
 def normalize_nl(nl: str) -> str:
@@ -23,6 +25,9 @@ def normalize_nl(nl: str) -> str:
     nl = word_by_word_expand(nl)
     #nl = replace_files(nl)
     #nl = replace_numbers(nl)
+    nl = nl.lower()
+    if STEM:
+        nl = " ".join(stem_words(filter_stop_words(nl.split())))
     return nl
 
 
@@ -43,7 +48,7 @@ def pretokenize(string) -> List[str]:
 
 
 class CountingDict:
-    def __init__(self, prefix: str, max_count: int = 3):
+    def __init__(self, prefix: str, max_count: int = 3, suffix: str = ""):
         self._conversions = {}
         self._prefix = prefix
         self._max_count = max_count
@@ -64,8 +69,8 @@ class CountingDict:
 
 class NormState:
     def __init__(self):
-        self.files_seen = CountingDict("CONSTPATHNAME")
-        self.bash_vars = CountingDict("CONSTBASHVAR")
+        self.files_seen = CountingDict(f"{OPEN_BRACKET}PATHNAME", suffix=CLOSE_BRACKET)
+        self.bash_vars = CountingDict(f"{OPEN_BRACKET}VAR", suffix=CLOSE_BRACKET)
 
 
 def multi_expand_word(word: str, norm_state: NormState) -> List[str]:
@@ -77,9 +82,9 @@ def multi_expand_word(word: str, norm_state: NormState) -> List[str]:
         word, new_expands = transform(word, norm_state)
         word_expands.extend(new_expands)
     if was_quoted:
-        word_expands.append("WASQUOTEDWORD")
+        word_expands.append(f"{OPEN_BRACKET}QUOTE{CLOSE_BRACKET}")
         if " " in word:
-            word_expands.append("WASMULTIWORDQUOTE")
+            word_expands.append(f"{OPEN_BRACKET}MULTIWORD{CLOSE_BRACKET}")
         if any(any(subword == util for util in common_utils) for subword in word.split()):
             # If it looks like it is a quoted command, then don't expand
             word = word
@@ -95,14 +100,14 @@ url_words = ("://", ".com", "net", ".gov", ".edu")
 
 def expand_url(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
     if any(url_word in word for url_word in url_words):
-        return "", ["CONSTURL"]
+        return "", [f"{OPEN_BRACKET}url{CLOSE_BRACKET}"]
     return word, []
 
 
 def expand_dash_word(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
-    dash_split = word.split("-")
-    if len(dash_split) > 1:
-        return "", [*dash_split, "WASDASHWORD"]
+    #dash_split = word.split("-")
+    #if len(dash_split) > 1:
+    #    return "", [*dash_split, "WASDASHWORD"]
     return word, []
 
 
@@ -112,13 +117,16 @@ def expand_number_word(word: str, norm_state: NormState) -> Tuple[str, List[str]
 
     expands = []
     if isnum(word):
-        expands.append("CONSTNUMBER")
+        expands.append(f"{OPEN_BRACKET}number{CLOSE_BRACKET}")
         if len(word) < 3:
-            expands.append("CONSTONEORTWODIGIT")
+            #expands.append(f"{OPEN_BRACKET}10{CLOSE_BRACKET}")
+            expands.append(f"10")
         if len(word) == 3:
-            expands.append("CONSTTHREEDIGIT")
+            #expands.append(f"{OPEN_BRACKET}100{CLOSE_BRACKET}")
+            expands.append(f"100")
         if len(word) > 3:
-            expands.append("CONSTMORETHAN4")
+            #expands.append(f"{OPEN_BRACKET}10000{CLOSE_BRACKET}")
+            expands.append(f"10000")
         return "", expands
 
     return word, []
@@ -128,7 +136,7 @@ def expand_file_size(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
     for ext in ('kb', 'mb', 'gb', 'g', 'k', 'm', 'bytes'):
         splited = word.lower().split(ext)
         if len(splited) == 2 and len(splited[1]) == 0 and splited[0].isdigit():
-            return "", ["CONSTDATASIZE"]
+            return "", [f"{OPEN_BRACKET}size{CLOSE_BRACKET}"]
     return word, []
 
 
@@ -138,15 +146,15 @@ def expand_file_word(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
     if norm_state.files_seen.has_seen(word) or looks_like_a_file(unquoted_word):
         expands.append(norm_state.files_seen.convert(word))
         if "/" in word or 'dir' in word or 'folder' in word:
-            expands.append("CONSTDIRLIKE")
+            expands.append(f"{OPEN_BRACKET}directory{CLOSE_BRACKET}")
         else:
-            expands.append("CONSTNOTDIRLIKE")
+            expands.append(f"{OPEN_BRACKET}file{CLOSE_BRACKET}")
         if "*" in word:
-            expands.append("FNWITHGLOB")
+            expands.append(f"{OPEN_BRACKET}glob{CLOSE_BRACKET}")
         for ext in common_exts:
             if unquoted_word.endswith("." + ext.lower()):
                 if ext in useful_ext:
-                    expands.append("EXT" + ext)
+                    expands.append(f"{OPEN_BRACKET}EXT" + ext + f"{CLOSE_BRACKET}")
                 break
     word_left = "" if expands else word.lower()
     return word_left, expands
@@ -156,14 +164,14 @@ def expand_slash_word(word: str, norm_state: NormState) -> Tuple[str, List[str]]
     if word.count("/") == 1:
         a, b = word.split("/")
         if a and b:
-            return word, [a, b]
+            return "", [a, b]
     return word, []
 
 
 def expand_file_ext(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
     expands = []
     if word.lower() in common_exts:
-        expands.append("CONSTFILEEXTENSION")
+        expands.append(f"{OPEN_BRACKET}extension{CLOSE_BRACKET}")
         if word.lower() in useful_ext:
             expands.append(word)
         word = ""
@@ -172,14 +180,14 @@ def expand_file_ext(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
 
 def expand_glob(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
     if "*" in word:
-        return "", ["WORDWITHGLOB"]
+        return "", [f"{OPEN_BRACKET}wordglob{CLOSE_BRACKET}"]
     return word, []
 
 
 def expand_ip_addr(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
     by_dot = word.split(".")
     if len(by_dot) == 4 and all(s.isnumeric() for s in by_dot):
-        return "", ["CONSTIPADDRRESS"]
+        return "", [f"{OPEN_BRACKET}ipaddress{CLOSE_BRACKET}"]
     return word, []
 
 
@@ -196,7 +204,7 @@ ordinal_set = {
 
 def expand_ordinal(word: str, norm_state: NormState) -> Tuple[str, List[str]]:
     if word in ordinal_set:
-        return "", ["CONSTORDINAL"]
+        return "", [f"{OPEN_BRACKET}third{CLOSE_BRACKET}"]
     return word, []
 
 
@@ -209,13 +217,13 @@ def clean_punkt(nl: str) -> str:
 def cheap_replacers(nl: str) -> str:
     for i in range(10):
         fill = str(i) + '=' if i > 0 else ''
-        nl = nl.replace(f"[-[{fill}FILENAME]-]", f"cheapreplacer{i}.txt")
-        nl = nl.replace(f"[-[{fill}DIRNAME]-]", f"cheapdirnamerepl.txt")
-        nl = nl.replace(f"[-[{fill}LETTER]-]", f"a")
-        nl = nl.replace(f"[-[{fill}ENGWORD]-]", f"engwordreplacematch")
-        nl = nl.replace(f"[-[{fill}USERNAME]-]", f"uname")
-        nl = nl.replace(f"[-[{fill}EXTENSION]-]", f"cheapextrepl")
-        nl = nl.replace(f"[-[{fill}GROUPNAME]-]", f"cheapgroupname")
+        nl = nl.replace(f"[-[{fill}FILENAME]-]", f"{OPEN_BRACKET}file{i}{CLOSE_BRACKET}")
+        nl = nl.replace(f"[-[{fill}DIRNAME]-]", f"{OPEN_BRACKET}dir{CLOSE_BRACKET}")
+        nl = nl.replace(f"[-[{fill}LETTER]-]", f"{OPEN_BRACKET}letter{CLOSE_BRACKET}")
+        nl = nl.replace(f"[-[{fill}ENGWORD]-]", f"{OPEN_BRACKET}word{CLOSE_BRACKET}")
+        nl = nl.replace(f"[-[{fill}USERNAME]-]", f"{OPEN_BRACKET}username{CLOSE_BRACKET}")
+        nl = nl.replace(f"[-[{fill}EXTENSION]-]", f"{OPEN_BRACKET}extension{CLOSE_BRACKET}")
+        nl = nl.replace(f"[-[{fill}GROUPNAME]-]", f"{OPEN_BRACKET}groupname{CLOSE_BRACKET}")
     return nl
 
 
@@ -229,7 +237,7 @@ def replace_files(s: str):
             out_words.append(files_seen[unquoted_word])
             continue
         if looks_like_a_file(word):
-            norm = f"CONSTPATHNAME{len(files_seen)}"
+            norm = f"{OPEN_BRACKET}pathname{len(files_seen)}{CLOSE_BRACKET}"
             files_seen[unquoted_word] = norm
             out_words.append(norm)
             continue
@@ -245,7 +253,7 @@ def replace_numbers(s: str):
         pass
 
     return " ".join([
-        word if not isnum(word) else "CONSTNUMBER"
+        word if not isnum(word) else f"{OPEN_BRACKET}number{CLOSE_BRACKET}"
         for word in s.split()
     ])
 

@@ -266,9 +266,9 @@ def find_maybe_constants(node: nast, cmd) -> List[str]:
     if node.is_argument():
         if node.value in cmd:
             out.append(node.value)
-        if "*" in node.value and '.' in node.value:
-            # Weird thing where in fine '*java' gets expanded into '*.java'
-            out.append(node.value.replace('.', ''))
+        #if "*" in node.value and '.' in node.value:
+        #    # Weird thing where in fine '*java' gets expanded into '*.java'
+        #    out.append(node.value.replace('.', ''))
     out.extend(flatten_list(find_maybe_constants(child, cmd) for child in node.get_children()))
     return out
 
@@ -284,7 +284,7 @@ def find_maybe_flags(node: nast, cmd) -> List[str]:
     return out
 
 
-short_args_re = re.compile(r' -[a-z]+')
+short_args_re = re.compile(r' -[A-Za-z]+')
 
 
 def maybe_split_short_args(cmd: str, ast: nast) -> str:
@@ -322,8 +322,47 @@ def strip_var_assign(cmd: str) -> str:
     return cmd
 
 
-def strip_quote_words():
-    pass
+cmd_sub_strip_re = re.compile(r"(\S*)(\$\([^\)]+\)*\)|\`[^\`]+\`*\`)(\S*)")
+
+
+def strip_words_with_cmd_sub(cmd: str) -> str:
+    new_cmd = cmd
+    for match in cmd_sub_strip_re.finditer(cmd):
+        before_sub, sub, after_sub = match.groups()
+        if not before_sub and not after_sub:
+            continue  # Nothing to replace
+        maybe_new = cmd.replace(match.group(0), sub)
+        if is_same_preparse(cmd, maybe_new):
+            new_cmd = maybe_new
+    return new_cmd
+
+
+backtick_sub_re = re.compile(r"\`.+?\`")
+
+
+def replace_backtick_sub_with_dollar_sub(cmd):
+    new_cmd = cmd
+    for match in cmd_sub_strip_re.finditer(cmd):
+        maybe_new = cmd.replace(match.group(0), '$(' + match.group(0)[1:-1] + ")").strip()
+        if is_same_preparse(cmd, maybe_new):
+            new_cmd = maybe_new
+    return new_cmd
+
+
+def try_clean_paren_space_before_paren(cmd: str) -> str:
+    maybe_new = cmd.replace(" )", ")").strip()
+    if maybe_new != cmd and is_same_preparse(cmd, maybe_new):
+        return maybe_new
+    return cmd
+
+
+def try_unpack_only_command_sub(cmd) -> str:
+    if cmd.startswith("$(") and cmd.endswith(")"):
+        maybe_new = cmd[len("$("):-len(")")].strip()
+        if maybe_new != cmd and is_same_preparse(cmd, maybe_new):
+            return maybe_new
+    return cmd
+
 
 
 def safe_str_index(s: str, search):
@@ -364,6 +403,11 @@ def try_strip_every_word(cmd):
         maybe_new = remove_extra_whitespace(new_cmd.replace(word, ""))
         if is_same_preparse(cmd, maybe_new):
             new_cmd = maybe_new
+            continue
+        maybe_new = remove_extra_whitespace(new_cmd.replace(word, "arg"))
+        if is_same_preparse(cmd, maybe_new):
+            new_cmd = maybe_new
+            continue
     return new_cmd
 
 
@@ -379,17 +423,18 @@ def cmd_to_seq_str_edit(cmd: str):
 
     # Try and remove out constants
     for const in maybe_constants:
-        # First try to just get rid of it
-        maybe_new = remove_extra_whitespace(norm_cmd.replace(const, ""))
-        if is_same_preparse(cmd, maybe_new):
-            norm_cmd = maybe_new
-            continue
-        # Try and replace with an arg
-        repl_val = "arg"
-        maybe_new = norm_cmd.replace(const, "arg")
-        if is_same_preparse(cmd, maybe_new):
-            norm_cmd = maybe_new
-            continue
+        for const in (const, const.replace(".", "")):
+            # First try to just get rid of it
+            maybe_new = remove_extra_whitespace(norm_cmd.replace(const, ""))
+            if is_same_preparse(cmd, maybe_new):
+                norm_cmd = maybe_new
+                continue
+            # Try and replace with an arg
+            repl_val = "arg"
+            maybe_new = norm_cmd.replace(const, "arg")
+            if is_same_preparse(cmd, maybe_new):
+                norm_cmd = maybe_new
+                continue
 
     # Sometimes get something like "ls -l|wc". Split the pipe so more consistent
     if '|' in norm_cmd:
@@ -401,6 +446,10 @@ def cmd_to_seq_str_edit(cmd: str):
     norm_cmd = strip_var_assign(norm_cmd)
     norm_cmd = strip_only_quote(norm_cmd)
     norm_cmd = strip_flag_clear(norm_cmd)
+    norm_cmd = strip_words_with_cmd_sub(norm_cmd)
+    norm_cmd = replace_backtick_sub_with_dollar_sub(norm_cmd)
+    norm_cmd = try_clean_paren_space_before_paren(norm_cmd)
+    norm_cmd = try_unpack_only_command_sub(norm_cmd)
     norm_cmd = try_strip_every_word(norm_cmd)
     norm_cmd = norm_cmd.strip()
 

@@ -56,6 +56,7 @@ class SimpleGiveInModel(pl.LightningModule):
         preds = self.predict(nl)
         self.train_acc(preds, tgt)
         loss = F.cross_entropy(preds, tgt)
+        print("LOSS", loss)
         # Logging to TensorBoard by default
         self.log('train_loss', loss)
         self.log("train_acc_step", self.train_acc)

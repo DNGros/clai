@@ -60,7 +60,7 @@ def predict_subset(training: ACDataset, test: ACDataset, print_exs: bool = True)
     #print("POS sum", stats.describe(pos_sums))
     #print("NEG sum", stats.describe(neg_sums))
     #run_toy_class_highest(highests, vals_sums, to_pred_word_counts, is_pos_labels)
-    run_class_indv(all_pred_scores, all_pred, all_queries, all_eval_scores)
+    #run_class_indv(all_pred_scores, all_pred, all_queries, all_eval_scores)
     return all_cmds, all_cons
 
 

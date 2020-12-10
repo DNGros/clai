@@ -44,27 +44,33 @@ def run_class_indv(
     ]
 
     def proc_words(words):
-        return stem_words(filter_stop_words(words))
-    all_query_words = [set(proc_words(query)) for query in all_queries]
-    all_return_words = [set(proc_words(normalize_nl(pred.debug_ref_nl))) for pred in all_pred]
+        #return stem_words(filter_stop_words(words))
+        return words
+    all_query_words = [set(proc_words(query.split())) for query in all_queries]
+    all_return_words = [set(proc_words(normalize_nl(pred.debug_ref_nl).split())) for pred in all_pred]
     words_iou = [
         len(query_words & return_words) / len(query_words | return_words)
+        for query_words, return_words in zip(all_query_words, all_return_words)
+    ]
+    ex_words = [
+        len(set(return_words))
         for query_words, return_words in zip(all_query_words, all_return_words)
     ]
     print("-- Individual Scores")
     feats = np.array([
         all_pred_scores,
-        all_word_counts,
+        #all_word_counts,
         all_util_count,
         all_flag_counts,
-        words_iou
+        ex_words
+        #words_iou
     ]).transpose()
     labels = np.array(all_eval_scores) > 0
 
     #from interpret.glassbox import ExplainableBoostingClassifier
-    clf = GaussianProcessClassifier(1.0 * RBF(1.0))
+    #clf = GaussianProcessClassifier(1.0 * RBF(1.0))
     #clf = SVC(gamma=2, C=1, probability=True)
-    #clf = LogisticRegression()
+    clf = LogisticRegression()
     #clf = RandomForestClassifier(n_estimators=10)
     #clf = LogisticRegression(random_state=0).fit(feats, labels)
     print("Mean Label", labels.mean())
@@ -97,8 +103,8 @@ def run_class_indv(
     #show_link(clf.explain_global())
 
     #print(clf.get_params())
-    #print("intercept", clf.intercept_)
-    #print("coeff", clf.coef_)
+    print("intercept", clf.intercept_)
+    print("coeff", clf.coef_)
 
 
 

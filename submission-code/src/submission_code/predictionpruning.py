@@ -1,8 +1,10 @@
-from typing import List
+from functools import reduce
+from typing import List, Union
 from scipy.special import softmax
 from pprint import pprint
 import innereval.utils.metric_utils
-from innereval.evaluate import compute_metric_cache
+from datacleaning import normalize_nl
+from innereval.evaluate import compute_metric_cache, make_preparse_cached
 
 from modeling import Prediction
 import numpy as np
@@ -24,13 +26,58 @@ def compute_metric_grid(preds: List[str]) -> np.ndarray:
 
 def prune_predictions(predictions: List[Prediction], max_cnt=5) -> List[Prediction]:
     predictions.sort(key=lambda pred: pred.score, reverse=True)
-    predictions = _prune_duplicates(predictions, max_cnt=max_cnt)
+    predictions = prune_duplicates(predictions, max_cnt=max_cnt)
     #return _prune_duplicate_strs(predictions, max_cnt=max_cnt)
     #predictions = prune_optimized(_prune_duplicates(predictions, len(predictions)), max_cnt=max_cnt)
     #return predictions
     #return predictions
     #predictions = recalibrate(predictions)
+    predictions = new_recalibrate(predictions)
     return pad_predictions(predictions)
+
+
+def new_recalibrate(predictions: List[Prediction]) -> List[Prediction]:
+    scores = [pred.score for pred in predictions]
+    score_sum = sum(scores)
+    score_max = max(scores)
+    #prob_any_is_positive = expit(score_max * 3.22 + score_sum * 0.2 - 1.93)
+    all_util_count = [len(make_preparse_cached(pred.cmd).utility_names) for pred in predictions]
+    all_flag_counts = [
+        sum(len(flag_set) for flag_set in make_preparse_cached(pred.cmd).flag_nodes)
+        for pred in predictions
+    ]
+    all_return_words = [set(normalize_nl(pred.debug_ref_nl).split()) for pred in predictions]
+    ex_words = [
+        len(set(all_return_words))
+        for all_return_words in all_return_words
+    ]
+    prob_indv_is_positive = [
+        expit(score*4.28+util_count*(-.81)+flag_count*(0.087)+word_count*(0.02)+(-2.82)) if not pred.is_pad else 0
+        for score, util_count, flag_count, word_count, pred in
+        zip(scores, all_util_count, all_flag_counts, ex_words, predictions)
+    ]
+    #print("prob possitive", prob_indv_is_positive)
+    prob_indv_is_neg = [
+        (1-prob_pos) if prob_pos < 0.15 else 0
+        for prob_pos in prob_indv_is_positive
+    ]
+    prob_all_neg = reduce(lambda x, y: x * y, [1-p for p in prob_indv_is_positive])
+    new_confs = [
+        1 - (prob_neg * prob_all_neg)
+        for prob_neg in prob_indv_is_neg
+    ]
+    #print("new cofs", new_confs, prob_all_neg)
+    return [
+        Prediction(
+            pred.cmd,
+            score=pred.score,
+            eval_prob=new_conf,
+            debug=pred.debug,
+            debug_ref_nl=pred.debug_ref_nl,
+        )
+        for pred, new_conf in zip(predictions, new_confs)
+    ]
+    pass
 
 
 def recalibrate(predictions: List[Prediction]) -> List[Prediction]:
@@ -64,7 +111,6 @@ def recalibrate(predictions: List[Prediction]) -> List[Prediction]:
         )
         for pred, new_conf in zip(predictions, new_confs)
     ]
-
 
 
 def pad_predictions(predictions, max_cnt=5):
@@ -120,11 +166,15 @@ def _prune_duplicate_strs(predictions: List[Prediction], max_cnt=5) -> List[Pred
     return out
 
 
-def _prune_duplicates(predictions: List[Prediction], max_cnt=5):
+def prune_duplicates(predictions: List[Union[Prediction, str]], max_cnt=5):
+    def extract(v: Union[str, Prediction]) -> str:
+        if isinstance(v, str):
+            return v
+        return v.cmd
     out = []
     for pred in predictions:
         havent_seen_before = all(
-            o.cmd != pred.cmd and compute_metric_cache(pred.cmd, 1, o.cmd) < 1
+            extract(o) != extract(pred) and compute_metric_cache(extract(pred), 1, extract(o)) < 1
             for o in out
         )
         if havent_seen_before:

@@ -46,7 +46,7 @@ def predict_on(data, seed=42):
         for i in tqdm(range(len(cmds)))
     ]
     mean_score = sum(scores) / len(cmds)
-    print(mean_score)
+    print("MEAN SCORE", mean_score)
     return mean_score
 
 
@@ -57,7 +57,7 @@ def main():
         #seed in range(10)
         #seed in range(5)
         #seed in range(20)
-        seed in range(5)
+        seed in range(20)
     ]
     print(split_results)
     print("mean all splits", statistics.mean(split_results))

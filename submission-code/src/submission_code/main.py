@@ -8,7 +8,7 @@ print(sys.path)
 from predictionpruning import prune_predictions
 from irtoy import load_model, build_model_all_data
 
-#model = load_model()
+model = load_model()
 #model = build_model_all_data()
 
 
